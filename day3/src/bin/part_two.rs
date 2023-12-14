@@ -42,7 +42,7 @@ enum Type {
 
 fn main() {
 
-    let file: File = File::open("./input.txt").unwrap(); //TODO: Change to input.txt
+    let file: File = File::open("./input.txt").unwrap();
     let buf = BufReader::new(file);
 
     let grid_vec: Vec<Vec<Entry>> = read_input(buf); 
@@ -177,7 +177,6 @@ fn get_gear_ratios(input: Vec<Vec<Entry>>) -> Vec<u32> {
     return res_vec;
 }
 
-//TODO: Rewrite to multiply gear ratios.
 fn get_single_ratio(v: &Vec<Vec<Entry>>, col: usize, range: &Range<usize>) -> u32 {
 
     let mut num_count: usize = 0;
@@ -248,7 +247,6 @@ fn check_ranges(r1: &Range<usize>, r2: &Range<usize>) -> bool {
     return i32::try_from(r2.start).unwrap() >= i32::try_from(r1.start).unwrap() - 1 && r2.start <= r1.end + 1; 
 }
 
-// TODO: Implement
 fn sum_ratios(v: Vec<u32>) -> u32 {
     let mut sum:  u32 = 0;
     for n in v {

@@ -42,7 +42,7 @@ enum Type {
 
 fn main() {
 
-    let file: File = File::open("./input.txt").unwrap(); //TODO: Change to input.txt
+    let file: File = File::open("./input.txt").unwrap(); 
     let buf = BufReader::new(file);
 
     let grid_vec: Vec<Vec<Entry>> = read_input(buf); 
@@ -179,14 +179,11 @@ fn has_symbol(v: &Vec<Vec<Entry>>, col: usize, range: &Range<usize>) -> bool {
 
     let mut col_counter: usize = 0;
 
-   // println!("Checking {col}, {:?}.", range);
 
     for line in v {
         if (col > 0 && col_counter == col - 1) || col_counter == col || col_counter == col + 1 {
             for entry in line {
-          //     println!("Found: {}, checking for symbol.", entry);
                 if entry.is_symbol() {
-          //          println!("{} has symbol.\n", entry);
                     if check_ranges(range, &entry.row) {
                         return true;
                     }
@@ -195,7 +192,6 @@ fn has_symbol(v: &Vec<Vec<Entry>>, col: usize, range: &Range<usize>) -> bool {
         }
         col_counter += 1;
     }
- //   println!("Didnt find anything. \n");
     return false;
 }
 
