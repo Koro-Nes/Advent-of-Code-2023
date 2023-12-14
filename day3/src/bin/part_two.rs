@@ -42,14 +42,14 @@ enum Type {
 
 fn main() {
 
-    let file: File = File::open("./.txt").unwrap(); //TODO: Change to input.txt
+    let file: File = File::open("./input.txt").unwrap(); //TODO: Change to input.txt
     let buf = BufReader::new(file);
 
     let grid_vec: Vec<Vec<Entry>> = read_input(buf); 
 
-    let part_numbers: Vec<Entry> = get_part_nums(grid_vec);
+    let gear_ratio: Vec<u32> = get_gear_ratios(grid_vec);
     
-    let sum: u32 = sum_numbers(part_numbers);
+    let sum: u32 = sum_ratios(gear_ratio);
     println!("Sum is: {}", sum);
 }
 
@@ -159,44 +159,88 @@ fn vec_to_value(v: &Vec<u32>) -> u32 {
     return res;
 }
 
-fn get_part_nums(input: Vec<Vec<Entry>>) -> Vec<Entry> {
+fn get_gear_ratios(input: Vec<Vec<Entry>>) -> Vec<u32> {
     
-    let mut res_vec: Vec<Entry> = Vec::new();
+    let mut res_vec: Vec<u32> = Vec::new();
 
-    for line in &input {
-        for entry in line {
-            if entry.is_num() {
-                if has_symbol(&input, entry.col, &entry.row) {
-                    res_vec.push(entry.clone());
-                }
+    for l in &input {
+        for e in l {
+            if e.is_symbol() {
+                let col = e.col;
+                let range = &e.row;
+                let gear_ratio = get_single_ratio(&input, col, &range);
+                res_vec.push(gear_ratio);
             }
         }
-    }
+    } 
+    
     return res_vec;
 }
 
-fn has_symbol(v: &Vec<Vec<Entry>>, col: usize, range: &Range<usize>) -> bool {
+//TODO: Rewrite to multiply gear ratios.
+fn get_single_ratio(v: &Vec<Vec<Entry>>, col: usize, range: &Range<usize>) -> u32 {
 
-    let mut col_counter: usize = 0;
+    let mut num_count: usize = 0;
+    let mut num1: u32 = 0;
+    let mut num2: u32 = 0;
 
-   // println!("Checking {col}, {:?}.", range);
-
-    for line in v {
-        if (col > 0 && col_counter == col - 1) || col_counter == col || col_counter == col + 1 {
-            for entry in line {
-          //     println!("Found: {}, checking for symbol.", entry);
-                if entry.is_symbol() {
-          //          println!("{} has symbol.\n", entry);
-                    if check_ranges(range, &entry.row) {
-                        return true;
+    if col > 0 {
+        for e in &v[col-1] {
+            if e.is_num() {
+                if check_ranges(&e.row, range) {
+                    num_count += 1;
+                    if num_count > 2 {
+                        return 0;
+                    }
+                    if num_count == 1 {
+                        num1 = e.value.unwrap();
+                    }
+                    if num_count == 2 {
+                        num2 = e.value.unwrap();
                     }
                 }
             }
         }
-        col_counter += 1;
+    } 
+    for e in &v[col] {
+            if e.is_num() {
+                if check_ranges(&e.row, range) {
+                    num_count += 1;
+                    if num_count > 2 {
+                        return 0;
+                    }
+                    if num_count == 1 {
+                        num1 = e.value.unwrap();
+                    }
+                    if num_count == 2 {
+                        num2 = e.value.unwrap();
+                    }
+                }
+            }
     }
- //   println!("Didnt find anything. \n");
-    return false;
+
+    if col + 1 < v.len() {
+        for e in &v[col+1] {
+            if e.is_num() {
+                if check_ranges(&e.row, range) {
+                    num_count += 1;
+                    if num_count > 2 {
+                        return 0;
+                    }
+                    if num_count == 1 {
+                        num1 = e.value.unwrap();
+                    }
+                    if num_count == 2 {
+                        num2 = e.value.unwrap();
+                    }
+                }
+            }
+        }      
+    } 
+    if num_count == 1 {
+        return 0;
+    } 
+    return num1*num2;
 }
 
 // r1 needs to be number, r2 needs to be symbol
@@ -204,13 +248,11 @@ fn check_ranges(r1: &Range<usize>, r2: &Range<usize>) -> bool {
     return i32::try_from(r2.start).unwrap() >= i32::try_from(r1.start).unwrap() - 1 && r2.start <= r1.end + 1; 
 }
 
-fn sum_numbers(v: Vec<Entry>) -> u32{
+// TODO: Implement
+fn sum_ratios(v: Vec<u32>) -> u32 {
     let mut sum:  u32 = 0;
-    for e in v {
-        if e.is_symbol() {
-            panic!("Entry not a number.");
-        }
-        sum += e.value.unwrap();
+    for n in v {
+        sum += n;
     }
     return sum;
 }

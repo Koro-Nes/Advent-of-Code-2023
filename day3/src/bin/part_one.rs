@@ -42,7 +42,7 @@ enum Type {
 
 fn main() {
 
-    let file: File = File::open("./.txt").unwrap(); //TODO: Change to input.txt
+    let file: File = File::open("./input.txt").unwrap(); //TODO: Change to input.txt
     let buf = BufReader::new(file);
 
     let grid_vec: Vec<Vec<Entry>> = read_input(buf); 
