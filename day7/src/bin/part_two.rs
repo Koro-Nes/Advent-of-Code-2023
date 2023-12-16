@@ -1,5 +1,16 @@
 use std::{io::{BufReader, BufRead}, fs::File, collections::HashMap, cmp::Ordering};
 
+
+/*
+strength definitions:
+high card = 0
+one pair = 1
+two pair = 2
+three of a kind = 3
+full house = 4
+four of a kind = 5
+five of a kind = 6
+*/
 #[derive(Debug, Clone, PartialEq)]
 struct Cards {
     cards: String,
@@ -61,7 +72,7 @@ fn main() {
     let input = get_input(buf);
     let mut cards = parse_input(input);
     sort_hands(&mut cards);
-    let result = get_product(cards);
+    let result = get_product(cards.clone());
     println!("Result: {}", result);
 }
 
@@ -95,40 +106,47 @@ fn get_hand_type(str: String) -> u8 {
             hashmap.insert(c, 1);
         }
     }
-    if hashmap.len() == 5 {
-        return 0;
-    }
+
     let mut pairs = 0;
     let mut triple = 0;
+    let mut jokers = 0;
+    let mut curr_hand_strength: u8 = 0;
 
     for v in hashmap {
+        if v.0 == 'J' {
+            jokers = v.1;
+        }
         match v.1 {
             1 => (),
             2 => pairs += 1,
             3 => triple += 1,
-            4 => return 5, // four of a kind
+            4 => curr_hand_strength = 5, // four of a kind
             5 => return 6, // five of a kind
             _ => panic!("Invalid hand"),
         }
     }
+
     match pairs {
         0 => (),
         1 => {
             if triple == 1 {
-                return 4 // full house
+                curr_hand_strength = 4 // full house
             } else {
-                return 1 // one pair
+                curr_hand_strength = 1 // one pair
             }
         },
-        2 => return 2, // two pair
+        2 => curr_hand_strength = 2, // two pair
         _ => panic!("Not possible to have 3 pairs."),
     }
     match triple {
         0 => (),
-        1 => return 3, // three of a kind
+        1 => if pairs < 1 { curr_hand_strength = 3 }, // three of a kind
         _ => panic!("Not possible to have 2 triples."),
     }
-    return 0; // high card
+    if jokers > 0 {
+        curr_hand_strength = get_improved_joker_hand(curr_hand_strength, jokers);
+    }
+    return curr_hand_strength;
 }
 
 #[inline]
@@ -139,16 +157,16 @@ fn sort_hands(v: &mut Vec<Cards>) {
 #[inline]
 fn create_strength_map() -> HashMap<char, u8> {
     let mut hm: HashMap<char, u8> = HashMap::new();
-    hm.insert('2', 0);
-    hm.insert('3', 1);
-    hm.insert('4', 2);
-    hm.insert('5', 3);
-    hm.insert('6', 4);
-    hm.insert('7', 5);
-    hm.insert('8', 6);
-    hm.insert('9', 7);
-    hm.insert('T', 8);
-    hm.insert('J', 9);
+    hm.insert('J', 0);
+    hm.insert('2', 1);
+    hm.insert('3', 2);
+    hm.insert('4', 3);
+    hm.insert('5', 4);
+    hm.insert('6', 5);
+    hm.insert('7', 6);
+    hm.insert('8', 7);
+    hm.insert('9', 8);
+    hm.insert('T', 9);
     hm.insert('Q', 10);
     hm.insert('K', 11);
     hm.insert('A', 12);
@@ -164,4 +182,32 @@ fn get_product(v: Vec<Cards>) -> u128 {
         i += 1;
     }
     return sum;
+}
+
+#[inline]
+fn get_improved_joker_hand(curr_hand_strength: u8, jokers: u8) -> u8 {
+    let improved_strength: u8;
+    match curr_hand_strength {
+        0 => improved_strength = 1, // 0 implies high card: ABCDJ => AABCD | one pair
+        1 => improved_strength = 3, // 1 implies one pair:  AABCJ => AAABC | three of a kind
+        2 => {
+                if jokers < 2 {
+                    improved_strength = 4; // 2 implies two pair:  AABBJ => AAABB | full house
+                } else {
+                    improved_strength = 5; // AAJJB => AAAAB | four of a kind
+                }
+            }
+        3 => {
+               match jokers {
+                1 => improved_strength = 5, // AAAJB | four of a kind
+                2 => improved_strength = 6, // AAAJJ | five of a kind
+                3 => improved_strength = 5, // JJJAB | four of a kind
+                _ => panic!("Invalid input."),
+               } 
+            },
+        4 => improved_strength = 6, // 4 implies full house: AAAJJ || JJJAA => AAAAA | five of a kind
+        5 => improved_strength = 6, // 5 implies four of a kind: AAAAJ => AAAAA | five of a kind
+        _ => panic!("{}: Invalid input.", curr_hand_strength), 
+    }
+    return improved_strength;
 }
