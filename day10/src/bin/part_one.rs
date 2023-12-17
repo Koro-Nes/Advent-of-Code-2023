@@ -1,152 +1,242 @@
-use std::{collections::HashMap, fs::File, io::{BufReader, BufRead}};
+use std::{
+    collections::{HashMap, HashSet},
+    fs::File,
+    io::{BufRead, BufReader}, f32::consts::E,
+};
 
-#[allow(dead_code)]
-
-#[derive(Debug, Clone)]
-struct Node<'a> {
-    adj: Vec<(usize, usize)>,
-    dir: &'a str,
-}
-#[allow(dead_code)]
-impl Node<'_> {
-    fn new(dir: &str) -> Node {
-        let adj: Vec<(usize, usize)> = Vec::new();
-        return Node { adj, dir };
-    }
-    fn new_with_adj<'a>(dir: &'a str, adjacent: Vec<(usize, usize)>) -> Node<'a> {
-        return Node { adj: adjacent, dir };
-    }
-}
-#[allow(dead_code)]
 #[derive(Debug)]
 struct Graph {
     vertices: Vec<Vertex>,
-    edges: Vec<Edge>,
 }
 
 impl Graph {
-    fn new(hm: HashMap<(usize, usize), Node<'static>>) -> Graph {
-        let mut edges: Vec<Edge> = Vec::new();
-        let mut vertices: Vec<Vertex> = Vec::new();
+    fn new(v: Vec<Vertex>) -> Graph {
+        return Graph { vertices: v }
+    }
+    fn get_hashmap(&self) -> HashMap<(usize, usize), Vec<Edge>> {
+        let mut hm: HashMap<(usize, usize), Vec<Edge>> = HashMap::new();
 
-        for (pos, node) in hm {
-            vertices.push(Vertex { col: pos.0, row: pos.1 });
-            for e in node.adj {
-                let curr_edge = Edge { pos0: pos, pos1: e };
-                if !check_if_already_included(&curr_edge, &edges) {
-                    edges.push(curr_edge);
-                }
+        for v in &self.vertices {
+            hm.insert(v.pos, v.edges.clone());
+        }
+
+        return hm
+    }
+    fn get_edges(&self) {
+        for e in &self.vertices {
+            if !e.edges.is_empty() {
+                println!("Vertex {}, {}: {:?}", e.pos.0, e.pos.1, e.edges)
             }
         }
-        return Graph { vertices, edges };
     }
-}
-#[allow(dead_code)]
-#[derive(Debug)]
-struct Vertex {
-    col: usize,
-    row: usize,
+    fn traverse(&self, root: (usize, usize)) -> u128 {
+        let v_map = self.get_hashmap();
+        let start_edges = v_map.get(&root).unwrap();
+        let mut queue: Vec<Edge> = Vec::new();
+
+        let mut count: u128 = 0;
+
+        for e in start_edges {
+            queue.push(*e);
+        }
+
+        let mut visited: Vec<Edge> = Vec::new();
+        let mut history: Vec<(usize, usize)> = Vec::new();
+
+        while let Some(next) = queue.pop() {
+            if contains_edge(&visited, &next) {
+                continue;
+            }
+
+            if !history.contains(&next.source) {
+                history.push(next.source);
+            }
+
+            visited.push(next);
+
+            let n_edges = v_map.get(&next.dest).unwrap();
+            for e in n_edges {
+                if !contains_edge(&visited, e) {
+                    queue.push(*e);
+                }
+            }
+            count += 1;
+        }
+        return count / 2;
+    }
+
 }
 
-#[derive(Debug)]
-struct Edge {
-    pos0: (usize, usize),
-    pos1: (usize, usize),
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+struct Vertex {
+    pos: (usize, usize),
+    edges: Vec<Edge>
 }
+
+#[derive(Debug, Clone, Copy, Eq, Hash)]
+struct Edge {
+    source: (usize, usize),
+    dest: (usize, usize),
+}
+
 
 impl Edge {
-    fn is_equal(&self, other: &Edge) -> bool {
-        return (self.pos0 == other.pos0 && self.pos1 == other.pos1) || (self.pos0 == other.pos1 && self.pos1 == other.pos0);
+    // always sorts ascendingly
+    fn new(x: (usize, usize), y: (usize, usize)) -> Edge {
+        if x.0 < y.0 {
+            return Edge { source: x, dest: y };
+        } else if x.0 > y.0 {
+            return Edge { source: y, dest: x };
+        } else {
+            if x.1 < y.1 {
+                return Edge { source: x, dest: y };
+            } else {
+                return Edge { source: y, dest: x };
+            }
+        }
+    }
+}
+
+impl PartialEq for Edge {
+    fn eq(&self, other: &Self) -> bool {
+        (self.source == other.source && self.dest == other.dest) || (self.source == other.dest && self.dest == other.source)
     }
 }
 
 
 fn main() {
-
-    let file: File = File::open("./square.txt").unwrap();
+    let file: File = File::open("./input.txt").expect("Invalid Filepath.");
     let buf: BufReader<File> = BufReader::new(file);
-    let dir_map: HashMap<char, &str> = get_dir_hashmap();
-    let node_map: HashMap<(usize, usize), Node<'_>> = create_node_map(buf, &dir_map);
-    let connected_graph: HashMap<(usize, usize), Node<'_>> = check_edges(node_map); 
-    let graph = Graph::new(connected_graph);
-    println!("{:?}", graph);
+    let mut input: Vec<String> = Vec::new();
+
+    for l in buf.lines() {
+        input.push(l.unwrap());
+    }
+    let graph_data = parse_input(&input);
+    let graph = Graph::new(graph_data.0);
+    let result = graph.traverse(graph_data.1);
+    println!("Result is: {}", result);
 }
 
-fn get_dir_hashmap() -> HashMap<char, &'static str> {
-    let mut hm: HashMap<char, &'static str> = HashMap::new();
+fn parse_input(v: &Vec<String>) -> (Vec<Vertex>, (usize, usize)) {
+    let mut vertices: Vec<Vertex> = Vec::new();
+
+    let mut i = 0;
+    let mut j;
+    let hm = get_dir_map();
+    let mut start = (0,0);
+
+    let mut grid: Vec<Vec<char>> = Vec::new();
+    for line in v {
+        grid.push(line.chars().collect());
+    }
+
+    while i < grid.len() {
+        j = 0;
+        while j < grid[i].len() {
+            let mut edges: Vec<Edge> = Vec::new();
+            if grid[i][j] == 'S' {
+                start = (i,j);
+            }
+            if grid[i][j] != '.' {
+
+                let dir = *hm.get(&grid[i][j]).unwrap();
+                if dir.contains("n") && i > 0 {
+                    match grid[i - 1][j] {
+                        '.' => (),
+                        _ => {
+                            let dir_dest = *hm.get(&grid[i - 1][j]).unwrap();
+                            if dir_dest.contains("s") {
+                                add_ndup(&mut edges, Edge::new((i,j), (i-1,j)), (i,j))
+                            }
+                        }
+                    }
+                }
+                if dir.contains("s") && i + 1 < grid.len() {
+                    match grid[i + 1][j] {
+                        '.' => (),
+                        _ => {
+                            let dir_dest = *hm.get(&grid[i + 1][j]).unwrap();
+                            if dir_dest.contains("n") {
+                                add_ndup(&mut edges,Edge::new((i,j), (i+1,j)), (i,j))
+                           }
+                        }
+                    }
+                }
+                if dir.contains("w") && j > 0 {
+                    match grid[i][j - 1] {
+                        '.' => (),
+                        _ => {
+                            let dir_dest = *hm.get(&grid[i][j - 1]).unwrap();
+                            if dir_dest.contains("e") {
+                                add_ndup(&mut edges,Edge::new((i,j), (i,j-1)), (i,j)) 
+                            }
+                        }
+                    }
+                }
+                if dir.contains("e") && j + 1 < grid[i].len() {
+                    match grid[i][j + 1] {
+                        '.' => (),
+                        _ => {
+                            let dir_dest = *hm.get(&grid[i][j + 1]).unwrap();
+                            if dir_dest.contains("w") {
+                                add_ndup(&mut edges,Edge::new((i,j), (i,j+1)), (i,j)) 
+                            }
+                        }
+                    }
+                }
+            }
+            if !edges.is_empty() {
+                vertices.push(Vertex { pos: (i, j), edges });
+            }
+            j += 1;
+        }
+        i += 1;
+    }
+
+    return (vertices, start);
+}
+
+fn get_dir_map() -> HashMap<char, &'static str> {
+    let mut hm: HashMap<char, &str> = HashMap::new();
 
     hm.insert('|', "ns");
     hm.insert('-', "ew");
     hm.insert('L', "ne");
-    hm.insert('J', "sw");
-    hm.insert('7', "sw");
+    hm.insert('J', "nw");
+    hm.insert('7', "ws");
     hm.insert('F', "se");
-    hm.insert('S', "nesw");
-
+    hm.insert('S', "nswe");
 
     return hm;
 }
 
-fn create_node_map(buf: BufReader<File>, dir_map: &HashMap<char, &'static str>) -> HashMap<(usize, usize), Node<'static>> {
-    let mut hm: HashMap<(usize, usize), Node> = HashMap::new();
-    let mut col: usize = 0;
-    for line in buf.lines() {
-        let mut row: usize = 0;
-        let chars = line.unwrap().chars().collect::<Vec<char>>();
-        for c in chars {
-            if c != '.' {
-                let dir = *dir_map.get(&c).unwrap();
-                let curr_location = (col, row);
-                let curr_node = Node::new(dir);
-                hm.insert(curr_location, curr_node);
-            }
-            row += 1;
+fn add_ndup(v: &mut Vec<Edge>, a: Edge, pos: (usize, usize)) {
+    let mut b = false;
+
+    let corrected_edge = if a.source == pos {
+        a
+    } else {
+        Edge { source: a.dest, dest: a.source }
+    }; 
+
+
+    for e in v.clone() {
+        if e == a {
+         b = true;   
         }
-        col += 1;
     }
-    return hm;
+    if !b {
+        v.push(corrected_edge);
+    }
 }
 
-fn check_edges(hm: HashMap<(usize, usize), Node<'static>>) -> HashMap<(usize, usize), Node<'static>> {
-
-    let mut hm_clone: HashMap<(usize, usize), Node<'_>> = HashMap::new(); // needs to be cloned to statisfy borrow checker
-
-    for node in &hm {
-        let mut adjacent: Vec<(usize, usize)> = Vec::new();
-        let node_dir = node.1.dir;
-        let col = node.0.0;
-        let row = node.0.1;
-
-        if node_dir.contains("n") && col > 0 {
-            if hm.contains_key(&(col-1, row)) {
-                adjacent.push((col-1, row));
-            }
-        }
-        if node_dir.contains("e") {
-            if hm.contains_key(&(col, row+1)) {
-                adjacent.push((col, row+1));
-            }
-        }
-        if node_dir.contains("s") {
-            if hm.contains_key(&(col+1, row)) {
-                adjacent.push((col+1, row));
-            }
-        }    
-        if node_dir.contains("w") && row > 0 {
-            if hm.contains_key(&(col, row-1)) {
-                adjacent.push((col, row-1));
-            }
-        }    
-        hm_clone.insert((col, row), Node { adj: adjacent, dir: node_dir });
-    }
-    return hm_clone;
-}
-
-fn check_if_already_included(e: &Edge, v: &Vec<Edge>) -> bool {
-    for a in v {
-        if e.is_equal(&a) {
+fn contains_edge(v: &Vec<Edge>, e: &Edge) -> bool {
+    for x in v {
+        if *x == *e {
             return true;
         }
     }
     return false;
 }
+
