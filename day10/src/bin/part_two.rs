@@ -1,7 +1,7 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader}, f32::consts::E,
 };
 
 #[derive(Debug)]
@@ -22,7 +22,14 @@ impl Graph {
 
         return hm
     }
-    fn traverse(&self, root: (usize, usize)) -> u128 {
+    fn get_edges(&self) {
+        for e in &self.vertices {
+            if !e.edges.is_empty() {
+                println!("Vertex {}, {}: {:?}", e.pos.0, e.pos.1, e.edges)
+            }
+        }
+    }
+    fn traverse(&self, root: (usize, usize)) -> Vec<(usize, usize)>{
         let v_map = self.get_hashmap();
         let start_edges = v_map.get(&root).unwrap();
         let mut queue: Vec<Edge> = Vec::new();
@@ -98,7 +105,7 @@ impl PartialEq for Edge {
 
 
 fn main() {
-    let file: File = File::open("./input.txt").expect("Invalid Filepath.");
+    let file: File = File::open("./square.txt").expect("Invalid Filepath.");
     let buf: BufReader<File> = BufReader::new(file);
     let mut input: Vec<String> = Vec::new();
 
@@ -232,4 +239,3 @@ fn contains_edge(v: &Vec<Edge>, e: &Edge) -> bool {
     }
     return false;
 }
-
