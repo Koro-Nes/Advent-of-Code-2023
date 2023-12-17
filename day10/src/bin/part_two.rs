@@ -1,7 +1,7 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fs::File,
-    io::{BufRead, BufReader}, f32::consts::E,
+    io::{BufRead, BufReader},
 };
 
 #[derive(Debug)]
@@ -29,12 +29,11 @@ impl Graph {
             }
         }
     }
-    fn traverse(&self, root: (usize, usize)) -> Vec<(usize, usize)>{
+    fn traverse(&self, root: (usize, usize)) -> (Vec<(usize, usize)>, i32) {
         let v_map = self.get_hashmap();
         let start_edges = v_map.get(&root).unwrap();
         let mut queue: Vec<Edge> = Vec::new();
-
-        let mut count: u128 = 0;
+        let mut count = 0;
 
         for e in start_edges {
             queue.push(*e);
@@ -62,7 +61,7 @@ impl Graph {
             }
             count += 1;
         }
-        return count / 2;
+        return (history, count);
     }
 
 }
@@ -105,7 +104,7 @@ impl PartialEq for Edge {
 
 
 fn main() {
-    let file: File = File::open("./square.txt").expect("Invalid Filepath.");
+    let file: File = File::open("./test1b.txt").expect("Invalid Filepath.");
     let buf: BufReader<File> = BufReader::new(file);
     let mut input: Vec<String> = Vec::new();
 
@@ -115,7 +114,11 @@ fn main() {
     let graph_data = parse_input(&input);
     let graph = Graph::new(graph_data.0);
     let result = graph.traverse(graph_data.1);
-    println!("Result is: {}", result);
+
+    let s = parse_input(&input);
+    let points = s.0.iter().map(|x| x.pos).collect::<Vec<(usize, usize)>>();
+    get_enclosed_area(points, result.1);
+    println!("Start: {:?}, {:?}", graph_data.1, result.0);
 }
 
 fn parse_input(v: &Vec<String>) -> (Vec<Vertex>, (usize, usize)) {
@@ -238,4 +241,68 @@ fn contains_edge(v: &Vec<Edge>, e: &Edge) -> bool {
         }
     }
     return false;
+}
+
+fn get_minmax_coords(v: &Vec<(usize, usize)>) -> ((usize, usize),(usize, usize)) {
+    let mut col_min = v[0].0;
+    let mut col_max = v[0].0;
+    let mut row_max = v[0].1;
+    let mut row_min = v[0].1;
+
+    for pos in v {
+        if pos.0 < col_min {
+            col_min = pos.0;
+        }
+        if pos.0 > col_max {
+            col_max = pos.0;
+        }
+        if pos.1 < row_min {
+            row_min = pos.1;
+        }
+        if pos.1 > row_max {
+            row_max = pos.1;
+        }
+    }
+    return ((col_min, row_min), (col_max, row_max));
+}
+
+fn create_enclosed_grid(v: &Vec<(usize, usize)>, min: (usize, usize), max: (usize, usize)) -> Vec<Vec<char>> {
+    let mut grid: Vec<Vec<char>> = Vec::new();
+
+    for i in min.0..max.0+1 {
+        let mut line: Vec<char> = Vec::new();
+        for j in min.1..max.1+1 {
+            if v.contains(&(i, j)) {
+                line.push('X');
+            } else {
+                line.push('.');
+            }
+        }
+        grid.push(line);
+    }
+
+    return grid;
+}
+
+fn get_enclosed_area(history: Vec<(usize, usize)>, pathlen: i32) {
+
+    /* 
+        Shoelace formula 
+        A = (1/2) * Sum(y_i*(x_i-1-x_i+1))
+    */ 
+
+    let points = history_to_points(history);
+    let sum: i32 = points
+        .windows(2)
+        .map(|x| { x[0].1 as i32 * x[1].0 as i32 - x[0].0 as i32 * x[1].1 as i32 })
+        .sum();
+    let area = sum.abs() / 2;
+    let interior = (area + 1 - (points.len() as i32 / 2)).abs();
+    println!("Result: {interior}");
+
+}
+
+fn history_to_points(v: Vec<(usize, usize)>) -> Vec<(usize, usize)> {
+    let mut res: Vec<(usize, usize)> = Vec::new();
+    res
 }
