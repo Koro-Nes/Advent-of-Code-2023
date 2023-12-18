@@ -98,7 +98,6 @@ fn expand_pairs(v: Vec<(Position, Position)>, rows: Vec<i128>, cols: Vec<i128>, 
         let mut p1 = p.0;
         let mut p2 = p.1;
 
-        //check if x was affected by expansion
         for c in &cols {
             if p1.x > *c + p1.offset_x {
                 p1.x += offset;
