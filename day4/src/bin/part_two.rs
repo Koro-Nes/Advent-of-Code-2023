@@ -1,4 +1,4 @@
-use std::{fs::File, io::{BufReader, BufRead}, collections::HashMap, array};
+use std::{fs::File, io::{BufReader, BufRead}, collections::HashMap};
 
 #[derive(Debug)]
 struct Card {

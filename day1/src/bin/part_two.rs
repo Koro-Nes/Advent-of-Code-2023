@@ -6,7 +6,7 @@ fn main() {
     let file = File::open("./input.txt").expect("Invalid input path");
     let buf_reader = BufReader::new(file);
 
-    let mut numbers: Vec<u32> = Vec::new();
+    let mut numbers: Vec<u32>;
     let mut res_vec: Vec<u32> = Vec::new();
 
     run_tests();
@@ -24,6 +24,7 @@ fn main() {
 
 }
 
+#[allow(unused_assignments)]
 fn parse_numbers(str: String) -> Vec<u32> {
 
     let char_vec: Vec<char> = str.chars().into_iter().collect();
